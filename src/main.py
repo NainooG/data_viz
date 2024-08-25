@@ -8,21 +8,27 @@ import numpy as np
 import os
 
 
-def bivariate_classification(x, y):
+def custom_bivariate_classification(x, y):
     if pd.isna(x) or pd.isna(y):
         return np.nan
 
-    if isinstance(x, (float, int)) and isinstance(y, (float, int)):
-        if len(set([x, y])) < 3:
-            return '22'
-        try:
-            x_class = pd.qcut([x], 3, labels=[1, 2, 3], duplicates='drop')[0]
-            y_class = pd.qcut([y], 3, labels=[1, 2, 3], duplicates='drop')[0]
-            return str(x_class) + str(y_class)
-        except ValueError:
-            return '22'
+    # Custom thresholds for People_of_Color
+    if x <= 20:
+        x_class = 1
+    elif x <= 40:
+        x_class = 2
     else:
-        return np.nan
+        x_class = 3
+
+    # Custom thresholds for Access_Healthy_Foods
+    if y <= 80:
+        y_class = 1
+    elif y <= 90:
+        y_class = 2
+    else:
+        y_class = 3
+
+    return str(x_class) + str(y_class)
 
 
 def main():
@@ -47,8 +53,10 @@ def main():
                                                          errors='coerce')
 
     joined_clean['bi_class'] = joined_clean.apply(
-        lambda row: bivariate_classification(row['People_of_Color'], row['Access_Healthy_Foods']), axis=1
+        lambda row: custom_bivariate_classification(row['People_of_Color'], row['Access_Healthy_Foods']), axis=1
     )
+
+    print("Unique bi_class values:", joined_clean['bi_class'].unique())
 
     bivariate_colors = {
         '11': '#e8e8e8', '12': '#ace4e4', '13': '#5ac8c8',
@@ -58,15 +66,13 @@ def main():
 
     joined_clean['color'] = joined_clean['bi_class'].map(bivariate_colors)
 
-    # Remove rows where the color is NaN
+    print("Rows with NaN colors:", joined_clean[joined_clean['color'].isna()])
+
     joined_clean = joined_clean.dropna(subset=['color'])
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.1)
-
     joined_clean.plot(ax=ax, color=joined_clean['color'], linewidth=0.1, edgecolor='white')
+
     ax.set_title('% People of Color and Limited Access To Healthy Foods in Washington State', fontsize=15)
 
     legend_labels = [
