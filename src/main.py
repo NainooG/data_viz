@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import os
+import folium
+
 
 
 def custom_bivariate_classification(x, y):
@@ -56,8 +58,6 @@ def main():
         lambda row: custom_bivariate_classification(row['People_of_Color'], row['Access_Healthy_Foods']), axis=1
     )
 
-    print("Unique bi_class values:", joined_clean['bi_class'].unique())
-
     bivariate_colors = {
         '11': '#e8e8e8', '12': '#ace4e4', '13': '#5ac8c8',
         '21': '#dfb0d6', '22': '#a5add3', '23': '#5698b9',
@@ -65,35 +65,32 @@ def main():
     }
 
     joined_clean['color'] = joined_clean['bi_class'].map(bivariate_colors)
-
-    print("Rows with NaN colors:", joined_clean[joined_clean['color'].isna()])
-
     joined_clean = joined_clean.dropna(subset=['color'])
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-    joined_clean.plot(ax=ax, color=joined_clean['color'], linewidth=0.1, edgecolor='white')
+    # Convert to GeoJSON
+    geojson_data = joined_clean.to_json()
 
-    ax.set_title('% People of Color and Limited Access To Healthy Foods in Washington State', fontsize=15)
+    # Create a Folium map
+    m = folium.Map(location=[47.5, -120], zoom_start=6)
 
-    legend_labels = [
-        ('#e8e8e8', 'Low People of Color, Low Limited Access'),
-        ('#ace4e4', 'Low People of Color, Medium Limited Access'),
-        ('#5ac8c8', 'Low People of Color, High Limited Access'),
-        ('#dfb0d6', 'Medium People of Color, Low Limited Access'),
-        ('#a5add3', 'Medium People of Color, Medium Limited Access'),
-        ('#5698b9', 'Medium People of Color, High Limited Access'),
-        ('#be64ac', 'High People of Color, Low Limited Access'),
-        ('#8c62aa', 'High People of Color, Medium Limited Access'),
-        ('#3b4994', 'High People of Color, High Limited Access')
-    ]
+    # Add the GeoJSON layer with the correct colors
+    folium.GeoJson(
+        geojson_data,
+        style_function=lambda feature: {
+            'fillColor': feature['properties']['color'],
+            'color': 'black',
+            'weight': 0.5,
+            'fillOpacity': 0.7,
+        }
+    ).add_to(m)
 
-    for color, label in legend_labels:
-        ax.plot([], [], color=color, label=label)
+    # Save the map to an HTML file
+    m.save(os.path.join(base_dir, 'interactive_map.html'))
 
-    ax.legend(loc='lower left', frameon=False)
-
-    plt.show()
+    # If running in a Jupyter notebook, you can display the map directly
+    return m
 
 
 if __name__ == "__main__":
-    main()
+    interactive_map = main()
+    interactive_map  # Display in Jupyter Notebook if available
