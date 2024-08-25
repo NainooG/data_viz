@@ -157,4 +157,3 @@ def create_bivariate_legend():
 
 if __name__ == "__main__":
     interactive_map = main()
-    interactive_map  # If running in Jupyter Notebook, this will display the map
